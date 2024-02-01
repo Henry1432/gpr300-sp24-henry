@@ -15,6 +15,8 @@
 #include <ew/cameraController.h>
 #include <ew/texture.h>
 
+#include <hb/Framebuffer.h>
+
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
 void drawUI(); 
