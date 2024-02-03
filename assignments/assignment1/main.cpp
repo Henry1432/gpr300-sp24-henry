@@ -22,6 +22,9 @@ struct Material {
 	float Shininess = 128;
 }material;
 
+float blurScale = 1.0f;
+int kernalSet = 0;
+
 int main() {
 	GLFWwindow* window = initWindow("Assignment 0", screenWidth, screenHeight);
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
@@ -29,6 +32,9 @@ int main() {
 	//model setup
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
 	ew::Shader pp = ew::Shader("assets/pp.vert", "assets/pp.frag");
+
+	hb::Framebuffer fb = hb::createFramebuffer(screenWidth, screenHeight, GL_RGB16F);
+
 	ew::Model monkeyModel = ew::Model("assets/suzanne.obj"); 
 	ew::Transform monkeyTransform;
 	//Handles to OpenGL object are unsigned integers
@@ -42,28 +48,24 @@ int main() {
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK); //Back face culling
 	glEnable(GL_DEPTH_TEST);//Depth testing
-
-
-	hb::Framebuffer fb = hb::createFramebuffer(screenWidth, screenHeight, GL_RGB16F);
+	
 	unsigned int dummyVAO;
-	glCreateVertexArrays(0, &dummyVAO);
-	glBindTextureUnit(0, brickTexture);
+	glCreateVertexArrays(1, &dummyVAO);
+	
 
 	while (!glfwWindowShouldClose(window)) {
-		glfwPollEvents();
+		glBindTextureUnit(0, brickTexture);
+		glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
 		glViewport(0, 0, fb.width, fb.height);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glfwPollEvents();
 		glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
-
-
+		
 		float time = (float)glfwGetTime();
 		deltaTime = time - prevFrameTime;
 		prevFrameTime = time;
 		
-		pp.use();
-		
-		glBindVertexArray(dummyVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		cameraController.move(window, &camera, deltaTime);
 
@@ -84,6 +86,17 @@ int main() {
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 
 		monkeyModel.draw(); //Draws monkey model using current shader
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		pp.use();
+		pp.setFloat("blurScale", blurScale);
+		pp.setInt("kernalSet", kernalSet);
+
+		glBindTextureUnit(0, fb.colorBuffer[0]);
+		glBindVertexArray(dummyVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		drawUI();
 
@@ -106,6 +119,10 @@ void drawUI() {
 		ImGui::SliderFloat("DiffuseK", &material.Kd, 0.0f, 1.0f);
 		ImGui::SliderFloat("SpecularK", &material.Ks, 0.0f, 1.0f);
 		ImGui::SliderFloat("Shininess", &material.Shininess, 2.0f, 1024.0f);
+	}
+	if (ImGui::CollapsingHeader("Post Processing")) {
+		ImGui::SliderFloat("BlurScale", &blurScale, 0.0f, 10.0f);
+		ImGui::SliderInt("KernalSet", &kernalSet, 0.0f, 3.0f);
 	}
 
 	//Add more camera settings here!

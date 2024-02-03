@@ -16,15 +16,12 @@ hb::Framebuffer hb::createFramebuffer(unsigned int width, unsigned int height, i
 	glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
 
 	//color buffer
-	for (int i = 0; i < sizeof(fb.colorBuffer) / sizeof(int); i++)
-	{
-		glGenTextures(1, fb.colorBuffer);
-		glBindTexture(GL_TEXTURE_2D, fb.colorBuffer[i]);
-		//hdr here, RGB 16/32 f or something
-		glTexStorage2D(GL_TEXTURE_2D, 1, colorFormat, width, height);
+	glGenTextures(1, &fb.colorBuffer[0]);
+	glBindTexture(GL_TEXTURE_2D, fb.colorBuffer[0]);
+	//hdr here, RGB 16/32 f or something
+	glTexStorage2D(GL_TEXTURE_2D, 1, colorFormat, width, height);
 
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, fb.colorBuffer[i], 0);
-	}
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, fb.colorBuffer[0], 0);
 
 	//depth buffer
 	glGenTextures(1, &fb.depthBuffer);
@@ -44,7 +41,6 @@ hb::Framebuffer hb::createFramebuffer(unsigned int width, unsigned int height, i
 		printf("Framebuffer incomplete: %d", fboStatus);
 	}
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	return fb;
 }
