@@ -1,20 +1,3 @@
-#include <stdio.h>
-#include <math.h>
-
-#include <ew/external/glad.h>
-
-#include <GLFW/glfw3.h>
-#include <imgui.h>
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
-
-#include <ew/shader.h>
-#include <ew/model.h>
-#include <ew/camera.h>
-#include <ew/transform.h>
-#include <ew/cameraController.h>
-#include <ew/texture.h>
-
 #include <hb/Framebuffer.h>
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
@@ -45,6 +28,7 @@ int main() {
 
 	//model setup
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
+	ew::Shader pp = ew::Shader("assets/pp.vert", "assets/pp.frag");
 	ew::Model monkeyModel = ew::Model("assets/suzanne.obj"); 
 	ew::Transform monkeyTransform;
 	//Handles to OpenGL object are unsigned integers
@@ -59,21 +43,33 @@ int main() {
 	glCullFace(GL_BACK); //Back face culling
 	glEnable(GL_DEPTH_TEST);//Depth testing
 
+
+	hb::Framebuffer fb = hb::createFramebuffer(screenWidth, screenHeight, GL_RGB16F);
+	unsigned int dummyVAO;
+	glCreateVertexArrays(0, &dummyVAO);
+	glBindTextureUnit(0, brickTexture);
+
 	while (!glfwWindowShouldClose(window)) {
-		glfwPollEvents(); 
+		glfwPollEvents();
+		glViewport(0, 0, fb.width, fb.height);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
+
 
 		float time = (float)glfwGetTime();
 		deltaTime = time - prevFrameTime;
 		prevFrameTime = time;
 		
+		pp.use();
+		
+		glBindVertexArray(dummyVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+
 		cameraController.move(window, &camera, deltaTime);
 
 		//rotate
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
 
-		glBindTextureUnit(0, brickTexture);
 		//Make "_MainTex" sampler2D sample from the 2D texture bound to unit 0
 		shader.use(); 
 		shader.setFloat("_Material.Ka", material.Ka);
@@ -86,6 +82,7 @@ int main() {
 		shader.setVec3("_EyePos", camera.position);
 		shader.setMat4("_Model", monkeyTransform.modelMatrix());
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+
 		monkeyModel.draw(); //Draws monkey model using current shader
 
 		drawUI();
