@@ -34,7 +34,7 @@ void main(){
     {
         vec2 texelSize = blurScale / textureSize(_ColorBuffer,0).xy;
         vec3 totalColor = vec3(0);
-        for(int y = -1; y <= 1; y++){
+        for(int y = 0; y <= 2; y++){
             for(int x = -1; x <= 1; x++){
                 vec2 offset = vec2(x,y) * texelSize;
                 totalColor += texture(_ColorBuffer,UV + offset).rgb * boxBlur[x][y];
@@ -47,7 +47,7 @@ void main(){
     {
         vec2 texelSize = blurScale / textureSize(_ColorBuffer,0).xy;
         vec3 totalColor = vec3(0);
-        for(int y = -1; y <= 1; y++){
+        for(int y = 0; y <= 2; y++){
             for(int x = -1; x <= 1; x++){
                 vec2 offset = vec2(x,y) * texelSize;
                 totalColor += texture(_ColorBuffer,UV + offset).rgb * sharpen[x][y];
@@ -60,7 +60,7 @@ void main(){
     {
         vec2 texelSize = blurScale / textureSize(_ColorBuffer,0).xy;
         vec3 totalColor = vec3(0);
-        for(int y = -1; y <= 1; y++){
+        for(int y = 0; y <= 2; y++){
             for(int x = -1; x <= 1; x++){
                 vec2 offset = vec2(x,y) * texelSize;
                 totalColor += texture(_ColorBuffer,UV + offset).rgb * gaussianBlur[x][y];
@@ -73,7 +73,7 @@ void main(){
     {
         vec2 texelSize = blurScale / textureSize(_ColorBuffer,0).xy;
         vec3 totalColor = vec3(0);
-        for(int y = -1; y <= 1; y++){
+        for(int y = 0; y <= 2; y++){
             for(int x = -1; x <= 1; x++){
                 vec2 offset = vec2(x,y) * texelSize;
                 totalColor += texture(_ColorBuffer,UV + offset).rgb * edgeDetect[x][y];
