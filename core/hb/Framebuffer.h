@@ -28,6 +28,6 @@ namespace hb
 		unsigned int height;
 	};
 
-
 	Framebuffer createFramebuffer(unsigned int width, unsigned int height, int colorFormat);
+	Framebuffer createDepthMap(unsigned int width, unsigned int height);
 }
