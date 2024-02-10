@@ -1,5 +1,6 @@
 #include <hb/Framebuffer.h>
 #include <ew/procGen.h>
+#include <glm/gtc/type_ptr.hpp>
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
@@ -14,6 +15,7 @@ float deltaTime;
 
 //cam setup
 ew::Camera camera;
+ew::Camera light;
 ew::CameraController cameraController;
 
 struct Material {
@@ -40,11 +42,13 @@ int main() {
 	hb::Framebuffer fb = hb::createFramebuffer(screenWidth, screenHeight, GL_RGB16F);
 	shadowBuffer = hb::createDepthMap(1024, 1024);
 
-	ew::Camera light;
-	light.position = glm::vec3(0, 2, 0);
+	light.position = glm::vec3(0.0f, 3.0f, 1.0f);
 	light.target = glm::vec3(0, 0, 0);
-	light.aspectRatio = 1024 / 1024;
+	light.nearPlane = 0.1;
+	light.farPlane = 20.0f;
+	light.aspectRatio = (float)1024/1024;
 	light.orthographic = true;
+	light.orthoHeight = 4;
 	
 
 	ew::Model monkeyModel = ew::Model("assets/suzanne.obj"); 
@@ -70,34 +74,36 @@ int main() {
 
 	while (!glfwWindowShouldClose(window)) {
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowBuffer.fbo);
+		glBindTexture(GL_TEXTURE_2D, shadowBuffer.depthBuffer);
 		glViewport(0, 0, shadowBuffer.width, shadowBuffer.height);
 		glClear(GL_DEPTH_BUFFER_BIT);
 
 		shadowShader.use();
-		shadowShader.setMat4("_ViewProjection", light.projectionMatrix() * light.viewMatrix());
 
-		shadowShader.setMat4("_Model", monkeyTransform.modelMatrix());
-		monkeyModel.draw();
+		shadowShader.setMat4("_ViewProjection", light.projectionMatrix() * light.viewMatrix());
+		
 		shadowShader.setMat4("_Model", planeTransform.modelMatrix());
 		planeMesh.draw();
-
-		glBindTextureUnit(0, brickTexture);
-		glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
-		glViewport(0, 0, fb.width, fb.height);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		shadowShader.setMat4("_Model", monkeyTransform.modelMatrix());
+		monkeyModel.draw();
 
 		glfwPollEvents();
 		glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
-		
+
 		float time = (float)glfwGetTime();
 		deltaTime = time - prevFrameTime;
 		prevFrameTime = time;
-		
+
 
 		cameraController.move(window, &camera, deltaTime);
 
 		//rotate
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
+
+		glBindTextureUnit(0, brickTexture);
+		glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
+		glViewport(0, 0, fb.width, fb.height);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		//Make "_MainTex" sampler2D sample from the 2D texture bound to unit 0
 		shader.use(); 

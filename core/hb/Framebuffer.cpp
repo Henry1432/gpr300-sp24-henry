@@ -65,6 +65,9 @@ hb::Framebuffer hb::createDepthMap(unsigned int width, unsigned int height)
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
 
+	float borderColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
 	GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 	if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
 		printf("Framebuffer incomplete: %d", fboStatus);

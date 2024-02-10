@@ -4,5 +4,5 @@ uniform mat4 _ViewProjection;
 uniform mat4 _Model;
 void main()
 {
-    gl_Position = _ViewProjection * _Model * vec4(vPos, 1.0);
+    gl_Position = _ViewProjection * _Model * vec4(vPos.x, vPos.y, vPos.z, 1.0);
 } 
