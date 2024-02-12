@@ -42,10 +42,10 @@ int main() {
 	hb::Framebuffer fb = hb::createFramebuffer(screenWidth, screenHeight, GL_RGB16F);
 	shadowBuffer = hb::createDepthMap(1024, 1024);
 
-	light.position = glm::vec3(0.0f, 3.0f, 1.0f);
+	light.position = glm::vec3(0.0f, 3.0f, 0.0f);
 	light.target = glm::vec3(0, 0, 0);
-	light.nearPlane = 0.1;
-	light.farPlane = 20.0f;
+	light.nearPlane = 0.5;
+	light.farPlane = 15.0f;
 	light.aspectRatio = (float)1024/1024;
 	light.orthographic = true;
 	light.orthoHeight = 4;
@@ -82,8 +82,8 @@ int main() {
 
 		shadowShader.setMat4("_ViewProjection", light.projectionMatrix() * light.viewMatrix());
 		
-		shadowShader.setMat4("_Model", planeTransform.modelMatrix());
-		planeMesh.draw();
+		/*shadowShader.setMat4("_Model", planeTransform.modelMatrix());
+		planeMesh.draw();*/
 		shadowShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw();
 
