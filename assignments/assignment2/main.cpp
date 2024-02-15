@@ -29,6 +29,9 @@ float blurScale = 0.0f;
 int kernalSet = 0;
 
 hb::Framebuffer shadowBuffer;
+glm::vec3 setLightPos = glm::vec3(0.0f, 1.0f, 1.0f);
+float bias = 0.005;
+int shadScale = 9;
 
 int main() {
 	GLFWwindow* window = initWindow("Assignment 0", screenWidth, screenHeight);
@@ -42,7 +45,7 @@ int main() {
 	hb::Framebuffer fb = hb::createFramebuffer(screenWidth, screenHeight, GL_RGB16F);
 	shadowBuffer = hb::createDepthMap(1024, 1024);
 
-	light.position = glm::vec3(0.0f, 3.0f, 0.0f);
+	light.position = glm::vec3(0.0f, 3.0f, 3.0f);
 	light.target = glm::vec3(0, 0, 0);
 	light.nearPlane = 0.5;
 	light.farPlane = 15.0f;
@@ -73,6 +76,8 @@ int main() {
 	planeTransform.position = glm::vec3(0,-1,0);
 
 	while (!glfwWindowShouldClose(window)) {
+		light.position = setLightPos * 3.0f;
+
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowBuffer.fbo);
 		glBindTexture(GL_TEXTURE_2D, shadowBuffer.depthBuffer);
 		glViewport(0, 0, shadowBuffer.width, shadowBuffer.height);
@@ -101,12 +106,19 @@ int main() {
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
 
 		glBindTextureUnit(0, brickTexture);
+		glBindTextureUnit(1, shadowBuffer.depthBuffer);
 		glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
 		glViewport(0, 0, fb.width, fb.height);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		//Make "_MainTex" sampler2D sample from the 2D texture bound to unit 0
 		shader.use(); 
+
+		shader.setMat4("LightSpaceMatrix", light.projectionMatrix() * light.viewMatrix());
+		shader.setInt("shadowMap", 1);
+		shader.setFloat("inBias", bias);
+		shader.setInt("shadScale", shadScale);
+
 		shader.setFloat("_Material.Ka", material.Ka);
 		shader.setFloat("_Material.Kd", material.Kd);
 		shader.setFloat("_Material.Ks", material.Ks);
@@ -159,6 +171,12 @@ void drawUI() {
 	if (ImGui::CollapsingHeader("Post Processing")) {
 		ImGui::SliderFloat("BlurScale", &blurScale, 0.0f, 10.0f);
 		ImGui::SliderInt("KernalSet", &kernalSet, 0.0f, 3.0f);
+	}
+	if (ImGui::CollapsingHeader("Lighting")) { 
+		float *lightPos[3] = {&(float)setLightPos.x, &(float)setLightPos.y, &(float)setLightPos.z};
+		ImGui::SliderFloat3("LightPosition", *lightPos, -1, 1);
+		ImGui::SliderFloat("Bias", &bias, 0.0, 0.05);
+		ImGui::SliderInt("ShadeScale", &shadScale, 1.0f, 25.0f);
 	}
 	//Add more camera settings here!
 	ImGui::End();
