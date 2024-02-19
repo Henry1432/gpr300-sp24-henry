@@ -15,6 +15,7 @@ uniform vec3 _EyePos;
 uniform vec3 _LightDirection = vec3(0.0,-1.0,0.0);
 uniform vec3 _LightColor = vec3(1.0);
 uniform vec3 _AmbientColor = vec3(0.3,0.4,0.46);
+vec3 normal;
 
 struct Material{
 	float Ka; //Ambient coefficient (0-1)
@@ -28,7 +29,7 @@ float ShadowCalculation(vec4 fragPosLightSpace);
 
 void main(){
 	//Make sure fragment normal is still length 1 after interpolation.
-	vec3 normal = normalize(fs_in.WorldNormal);
+	normal = normalize(fs_in.WorldNormal);
 	//Light pointing straight down
 	vec3 toLight = -_LightDirection;
 	float diffuseFactor = max(dot(normal,toLight),0.0);
@@ -60,7 +61,7 @@ float ShadowCalculation(vec4 fragPosLightSpace)
     // check whether current frag pos is in shadow
 
 	//look at the opengl shadowmapping, add min max thing
-	float bias = inBias;
+	float bias = max(0.05 * (1.0 - dot(normal, _LightDirection)), inBias);;
 
 	float shadow = 0.0;
 	vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
