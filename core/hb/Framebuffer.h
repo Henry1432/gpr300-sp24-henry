@@ -30,4 +30,5 @@ namespace hb
 
 	Framebuffer createFramebuffer(unsigned int width, unsigned int height, int colorFormat);
 	Framebuffer createDepthMap(unsigned int width, unsigned int height);
+	Framebuffer createGBuffer(unsigned int width, unsigned int height);
 }
