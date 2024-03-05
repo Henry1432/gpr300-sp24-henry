@@ -43,10 +43,11 @@ int main() {
 	ew::Shader pp = ew::Shader("assets/pp.vert", "assets/pp.frag");
 	ew::Shader shadowShader = ew::Shader("assets/depth.vert", "assets/depth.frag");
 	ew::Shader gBufferShader = ew::Shader("assets/geometryPass.vert", "assets/geometryPass.frag");
+	ew::Shader deferredLit = ew::Shader("assets/deferredLit.vert", "assets/deferredLit.frag");
 	
 	gBuffer = hb::createGBuffer(screenWidth, screenHeight);
 	hb::Framebuffer fb = hb::createFramebuffer(screenWidth, screenHeight, GL_RGB16F);
-	shadowBuffer = hb::createDepthMap(1024, 1024);
+	shadowBuffer = hb::createDepthMap(1024, 720);
 
 	light.position = glm::vec3(0.0f, 3.0f, 3.0f);
 	light.target = glm::vec3(0, 0, 0);
@@ -96,6 +97,25 @@ int main() {
 		gBufferShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw();
 
+		glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
+		glViewport(0, 0, fb.width, fb.height);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		deferredLit.use();
+
+		deferredLit.setVec3("_EyePos", camera.position);
+		deferredLit.setFloat("_Material.Ka", material.Ka);
+		deferredLit.setFloat("_Material.Kd", material.Kd);
+		deferredLit.setFloat("_Material.Ks", material.Ks);
+		deferredLit.setFloat("_Material.Shininess", material.Shininess);
+
+		glBindTextureUnit(0, gBuffer.colorBuffer[0]);
+		glBindTextureUnit(1, gBuffer.colorBuffer[1]);
+		glBindTextureUnit(2, gBuffer.colorBuffer[2]);
+		glBindTextureUnit(3, shadowBuffer.depthBuffer); //For shadow mapping
+
+		glBindVertexArray(dummyVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowBuffer.fbo);
 		glBindTexture(GL_TEXTURE_2D, shadowBuffer.depthBuffer);
 		glViewport(0, 0, shadowBuffer.width, shadowBuffer.height);
@@ -122,7 +142,7 @@ int main() {
 
 		//rotate
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
-
+		/*
 		glBindTextureUnit(0, brickTexture);
 		glBindTextureUnit(1, shadowBuffer.depthBuffer);
 		glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
@@ -152,8 +172,10 @@ int main() {
 
 		shader.setMat4("_Model", planeTransform.modelMatrix());
 		planeMesh.draw();
+		*/
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, fb.width, fb.height);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		pp.use();
