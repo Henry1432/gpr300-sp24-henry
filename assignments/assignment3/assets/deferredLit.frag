@@ -22,6 +22,15 @@ struct PointLight{
 const int MAX_POINT_LIGHTS = 64;
 PointLight pointLights[MAX_POINT_LIGHTS];
 
+
+struct DirectionalLight{
+	vec3 direction;
+	vec3 color;
+};
+uniform vec3 mainDirection;
+uniform vec3 mainColor;
+DirectionalLight _MainLight;
+
 //layout(binding = i) can be used as an alternative to shader.setInt()
 //Each sampler will always be bound to a specific texture unit
 uniform layout(binding = 0) sampler2D _gPositions;
@@ -50,8 +59,30 @@ vec3 calcPointLight(PointLight light,vec3 normal){
 	return lightColor;
 }
 
+vec3 calcDirectionalLight(DirectionalLight light, vec3 normal)
+{
+	vec3 worldPos = texture(_gPositions,UV).xyz;
+	//Light pointing straight down
+	vec3 toLight = -light.direction;
+	float diffuseFactor = max(dot(normal,toLight),0.0);
+
+	vec3 toEye = normalize(_EyePos - worldPos);
+	vec3 h = normalize(toLight + toEye);
+	float specularFactor = pow(max(dot(normal,h),0.0),_Material.Shininess);
+	//Combination of specular and diffuse reflection
+	vec3 lightColor = (_Material.Kd * diffuseFactor + _Material.Ks * specularFactor) * _LightColor;
+
+	lightColor+=_AmbientColor * _Material.Ka;
+
+
+	return lightColor;
+}
+
 void main()
 {
+	_MainLight.direction = mainDirection;
+	_MainLight.color = mainColor;
+	
 	for(int i = 0; i <= 10; i++)
 	{
 		pointLights[i].position = vec3(-5 + i,3, -5 + i);
@@ -60,7 +91,9 @@ void main()
 	}
 	
 	vec3 normal = texture(_gNormals,UV).xyz;
+
 	vec3 totalLight = vec3(0);
+	totalLight += calcDirectionalLight(_MainLight, normal);
 	//totalLight+=calcDirectionalLight(_MainLight,normal);
 	for(int i=0;i<MAX_POINT_LIGHTS;i++){
 		totalLight+=calcPointLight(pointLights[i],normal);
@@ -69,26 +102,45 @@ void main()
 	FragColor = vec4(albedo * totalLight,0);
 }
 
+/*
+void main()
+{
+	for(int i = 0; i <= 10; i++)
+	{
+		pointLights[i].position = vec3(0,3, i);
+		pointLights[i].radius = 5f;
+		pointLights[i].color = vec4(i+1/11,1,1,1)
+	}
+	
+	//Sample surface properties for this screen pixel
+	vec3 normal = texture(_gNormals,UV).xyz;
+	vec3 worldPos = texture(_gPositions,UV).xyz;
+	vec3 albedo = texture(_gAlbedo,UV).xyz;
 
-//void main()
-//{
-//	for(int i = 0; i <= 10; i++)
-//	{
-//		pointLights[i].position = vec3(0,3, i);
-//		pointLights[i].radius = 5f;
-//		pointLights[i].color = vec4(i+1/11,1,1,1)
-//	}
-//	
-//	//Sample surface properties for this screen pixel
-//	vec3 normal = texture(_gNormals,UV).xyz;
-//	vec3 worldPos = texture(_gPositions,UV).xyz;
-//	vec3 albedo = texture(_gAlbedo,UV).xyz;
-//
-//	//Worldspace lighting calculations, same as in forward shading
-//	vec3 lightColor = calculateLighting(normal,worldPos,albedo);
-//	FragColor = vec4(albedo * lightColor,1.0);
-//}
+	//Worldspace lighting calculations, same as in forward shading
+	vec3 lightColor = calculateLighting(normal,worldPos,albedo);
+	FragColor = vec4(albedo * lightColor,1.0);
+}
 
+
+	//Make sure fragment normal is still length 1 after interpolation.
+	normal = normalize(fs_in.WorldNormal);
+	//Light pointing straight down
+	vec3 toLight = -_LightDirection;
+	float diffuseFactor = max(dot(normal,toLight),0.0);
+	//Calculate specularly reflected light
+	vec3 toEye = normalize(_EyePos - fs_in.WorldPos);
+	//Blinn-phong uses half angle
+	vec3 h = normalize(toLight + toEye);
+	float specularFactor = pow(max(dot(normal,h),0.0),_Material.Shininess);
+	//Combination of specular and diffuse reflection
+	vec3 lightColor = (_Material.Kd * diffuseFactor + _Material.Ks * specularFactor) * _LightColor;
+	float shadow = ShadowCalculation(fs_in.FragPosLightSpace);
+	shadow /= shadScale;
+
+	lightColor+=_AmbientColor * _Material.Ka * (1.0 - shadow);
+	vec3 objectColor = texture(_MainTex,fs_in.TexCoord).rgb;
+*/
 vec3 calculateLighting(vec3 normal,vec3 worldPos,vec3 albedo)
 {
 	//Light pointing straight down

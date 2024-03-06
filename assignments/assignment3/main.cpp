@@ -25,6 +25,12 @@ struct Material {
 	float Shininess = 128;
 }material;
 
+struct PointLight {
+	glm::vec3 position;
+	float radius;
+	glm::vec3 color;
+};
+
 float blurScale = 0.0f;
 int kernalSet = 0;
 
@@ -44,6 +50,7 @@ int main() {
 	ew::Shader shadowShader = ew::Shader("assets/depth.vert", "assets/depth.frag");
 	ew::Shader gBufferShader = ew::Shader("assets/geometryPass.vert", "assets/geometryPass.frag");
 	ew::Shader deferredLit = ew::Shader("assets/deferredLit.vert", "assets/deferredLit.frag");
+	ew::Shader lightOrbShader = ew::Shader("assets/lightOrb.vert", "assets/lightOrb.frag");
 	
 	gBuffer = hb::createGBuffer(screenWidth, screenHeight);
 	hb::Framebuffer fb = hb::createFramebuffer(screenWidth, screenHeight, GL_RGB16F);
@@ -57,6 +64,15 @@ int main() {
 	light.orthographic = true;
 	light.orthoHeight = 4;
 	
+	const int numPointLights = 10;
+	PointLight pointLights[numPointLights];
+
+	for (int i = 0; i < numPointLights; i++)
+	{
+		pointLights[i].position = glm::vec3(-5 + i, 3, -5 + i);
+		pointLights[i].radius = 5;
+		pointLights[i].color = glm::vec3(i + 1 / 11, 1, 1);
+	}
 
 	ew::Model monkeyModel = ew::Model("assets/suzanne.obj"); 
 	ew::Transform monkeyTransform;
@@ -76,26 +92,13 @@ int main() {
 	glCreateVertexArrays(1, &dummyVAO);
 
 	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
+	ew::Mesh sphereMesh = ew::Mesh(ew::createSphere(1.0f, 8));
 	ew::Transform planeTransform;
 	planeTransform.position = glm::vec3(0,-1,0);
 
 	while (!glfwWindowShouldClose(window)) {
 		light.position = setLightPos * 3.0f;
 
-		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
-		glViewport(0, 0, gBuffer.width, gBuffer.height);
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		gBufferShader.use();
-		glBindTextureUnit(0, brickTexture);
-		gBufferShader.setInt("_MainTex", 0);
-		gBufferShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
-
-		gBufferShader.setMat4("_Model", planeTransform.modelMatrix());
-		planeMesh.draw();
-		gBufferShader.setMat4("_Model", monkeyTransform.modelMatrix());
-		monkeyModel.draw();
 
 		glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
 		glViewport(0, 0, fb.width, fb.height);
@@ -115,6 +118,21 @@ int main() {
 
 		glBindVertexArray(dummyVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
+		glViewport(0, 0, gBuffer.width, gBuffer.height);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		gBufferShader.use();
+		glBindTextureUnit(0, brickTexture);
+		gBufferShader.setInt("_MainTex", 0);
+		gBufferShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+
+		gBufferShader.setMat4("_Model", planeTransform.modelMatrix());
+		planeMesh.draw();
+		gBufferShader.setMat4("_Model", monkeyTransform.modelMatrix());
+		monkeyModel.draw();
 
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowBuffer.fbo);
 		glBindTexture(GL_TEXTURE_2D, shadowBuffer.depthBuffer);
@@ -142,6 +160,28 @@ int main() {
 
 		//rotate
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
+
+		//Blit gBuffer depth to same framebuffer as fullscreen quad
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.fbo); //Read from gBuffer 
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fb.fbo); //Write to current fbo
+		glBlitFramebuffer(
+			0, 0, screenWidth, screenHeight, 0, 0, screenWidth, screenHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST
+		);
+
+		//Draw all light orbs
+		lightOrbShader.use();
+		lightOrbShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+		for (int i = 0; i < numPointLights; i++)
+		{
+			glm::mat4 m = glm::mat4(1.0f);
+			m = glm::translate(m, pointLights[i].position);
+			m = glm::scale(m, glm::vec3(0.2f)); //Whatever radius you want
+
+			lightOrbShader.setMat4("_Model", m);
+			lightOrbShader.setVec3("_Color", pointLights[i].color);
+			sphereMesh.draw();
+		}
+
 		/*
 		glBindTextureUnit(0, brickTexture);
 		glBindTextureUnit(1, shadowBuffer.depthBuffer);
