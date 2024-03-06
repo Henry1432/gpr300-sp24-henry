@@ -176,43 +176,11 @@ int main() {
 			glm::mat4 m = glm::mat4(1.0f);
 			m = glm::translate(m, pointLights[i].position);
 			m = glm::scale(m, glm::vec3(0.2f)); //Whatever radius you want
-
+			
 			lightOrbShader.setMat4("_Model", m);
 			lightOrbShader.setVec3("_Color", pointLights[i].color);
 			sphereMesh.draw();
 		}
-
-		/*
-		glBindTextureUnit(0, brickTexture);
-		glBindTextureUnit(1, shadowBuffer.depthBuffer);
-		glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
-		glViewport(0, 0, fb.width, fb.height);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		//Make "_MainTex" sampler2D sample from the 2D texture bound to unit 0
-		shader.use(); 
-
-		shader.setMat4("LightSpaceMatrix", light.projectionMatrix() * light.viewMatrix());
-		shader.setInt("shadowMap", 1);
-		shader.setFloat("inBias", bias);
-		shader.setInt("shadScale", shadScale);
-
-		shader.setFloat("_Material.Ka", material.Ka);
-		shader.setFloat("_Material.Kd", material.Kd);
-		shader.setFloat("_Material.Ks", material.Ks);
-		shader.setFloat("_Material.Shininess", material.Shininess);
-
-
-		shader.setInt("_MainTex", 0);
-		shader.setVec3("_EyePos", camera.position);
-		shader.setMat4("_Model", monkeyTransform.modelMatrix());
-		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
-
-		monkeyModel.draw(); //Draws monkey model using current shader
-
-		shader.setMat4("_Model", planeTransform.modelMatrix());
-		planeMesh.draw();
-		*/
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, fb.width, fb.height);
