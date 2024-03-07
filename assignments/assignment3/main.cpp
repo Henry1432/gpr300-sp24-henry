@@ -67,12 +67,12 @@ int main() {
 	light.orthographic = true;
 	light.orthoHeight = 4;
 	
-	const int numPointLights = 10;
+	const int numPointLights = 64;
 	PointLight pointLights[numPointLights];
 
 	for (int i = 0; i < numPointLights; i++)
 	{
-		pointLights[i].position = glm::vec3(-5 + i, 3, -5 + i);
+		pointLights[i].position = glm::vec3(i, 3, i);
 		pointLights[i].radius = 5.0f;
 		float color = ((float)i)/ numPointLights;
 		pointLights[i].color = glm::vec3(1, color, color);
@@ -94,10 +94,10 @@ int main() {
 	unsigned int dummyVAO;
 	glCreateVertexArrays(1, &dummyVAO);
 
-	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
+	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(100, 100, 5));
 	ew::Mesh sphereMesh = ew::Mesh(ew::createSphere(1.0f, 8));
 	ew::Transform planeTransform;
-	planeTransform.position = glm::vec3(0,-1,0);
+	planeTransform.position = glm::vec3(45,-1,45);
 
 	while (!glfwWindowShouldClose(window)) {
 		Update();
