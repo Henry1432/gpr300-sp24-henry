@@ -54,7 +54,7 @@ hb::Framebuffer hb::createDepthMap(unsigned int width, unsigned int height)
 	glGenTextures(1, &depthMapFb.depthBuffer);
 	glBindTexture(GL_TEXTURE_2D, depthMapFb.depthBuffer);
 	//Create 16 bit depth buffer - must be same width/height of color buffer
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, depthMapFb.width, depthMapFb.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, depthMapFb.width, depthMapFb.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);

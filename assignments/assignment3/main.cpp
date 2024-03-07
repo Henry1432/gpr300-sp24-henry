@@ -4,7 +4,8 @@
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
-void drawUI(); 
+void drawUI();
+void Update();
 void resetCamera(ew::Camera* camera, ew::CameraController* controller);
 
 //Global state
@@ -39,9 +40,11 @@ hb::Framebuffer gBuffer;
 glm::vec3 setLightPos = glm::vec3(0.0f, 1.0f, 1.0f);
 float bias = 0.005;
 int shadScale = 9;
+GLFWwindow* window;
+ew::Transform monkeyTransform;
 
 int main() {
-	GLFWwindow* window = initWindow("Assignment 0", screenWidth, screenHeight);
+	window = initWindow("Assignment 0", screenWidth, screenHeight);
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
 	//model setup
@@ -70,12 +73,12 @@ int main() {
 	for (int i = 0; i < numPointLights; i++)
 	{
 		pointLights[i].position = glm::vec3(-5 + i, 3, -5 + i);
-		pointLights[i].radius = 5;
-		pointLights[i].color = glm::vec3(i + 1 / 11, 1, 1);
+		pointLights[i].radius = 5.0f;
+		float color = ((float)i)/ numPointLights;
+		pointLights[i].color = glm::vec3(1, color, color);
 	}
 
 	ew::Model monkeyModel = ew::Model("assets/suzanne.obj"); 
-	ew::Transform monkeyTransform;
 	//Handles to OpenGL object are unsigned integers
 	GLuint brickTexture = ew::loadTexture("assets/brick_color.jpg");
 
@@ -97,27 +100,23 @@ int main() {
 	planeTransform.position = glm::vec3(0,-1,0);
 
 	while (!glfwWindowShouldClose(window)) {
-		light.position = setLightPos * 3.0f;
+		Update();
+
+		glBindFramebuffer(GL_FRAMEBUFFER, shadowBuffer.fbo);
+		glBindTexture(GL_TEXTURE_2D, shadowBuffer.depthBuffer);
+		glViewport(0, 0, shadowBuffer.width, shadowBuffer.height);
+		glClear(GL_DEPTH_BUFFER_BIT);
+
+		shadowShader.use();
+
+		shadowShader.setMat4("_ViewProjection", light.projectionMatrix() * light.viewMatrix());
+
+		/*shadowShader.setMat4("_Model", planeTransform.modelMatrix());
+		planeMesh.draw();*/
+		shadowShader.setMat4("_Model", monkeyTransform.modelMatrix());
+		monkeyModel.draw();
 
 
-		glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
-		glViewport(0, 0, fb.width, fb.height);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		deferredLit.use();
-
-		deferredLit.setVec3("_EyePos", camera.position);
-		deferredLit.setFloat("_Material.Ka", material.Ka);
-		deferredLit.setFloat("_Material.Kd", material.Kd);
-		deferredLit.setFloat("_Material.Ks", material.Ks);
-		deferredLit.setFloat("_Material.Shininess", material.Shininess);
-
-		glBindTextureUnit(0, gBuffer.colorBuffer[0]);
-		glBindTextureUnit(1, gBuffer.colorBuffer[1]);
-		glBindTextureUnit(2, gBuffer.colorBuffer[2]);
-		glBindTextureUnit(3, shadowBuffer.depthBuffer); //For shadow mapping
-
-		glBindVertexArray(dummyVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
 		glViewport(0, 0, gBuffer.width, gBuffer.height);
@@ -134,40 +133,39 @@ int main() {
 		gBufferShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw();
 
-		glBindFramebuffer(GL_FRAMEBUFFER, shadowBuffer.fbo);
-		glBindTexture(GL_TEXTURE_2D, shadowBuffer.depthBuffer);
-		glViewport(0, 0, shadowBuffer.width, shadowBuffer.height);
-		glClear(GL_DEPTH_BUFFER_BIT);
+		glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
+		glViewport(0, 0, fb.width, fb.height);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		shadowShader.use();
+		glBindTextureUnit(0, gBuffer.colorBuffer[0]);
+		glBindTextureUnit(1, gBuffer.colorBuffer[1]);
+		glBindTextureUnit(2, gBuffer.colorBuffer[2]);
+		glBindTextureUnit(3, shadowBuffer.depthBuffer); //For shadow mapping
 
-		shadowShader.setMat4("_ViewProjection", light.projectionMatrix() * light.viewMatrix());
-		
-		/*shadowShader.setMat4("_Model", planeTransform.modelMatrix());
-		planeMesh.draw();*/
-		shadowShader.setMat4("_Model", monkeyTransform.modelMatrix());
-		monkeyModel.draw();
+		deferredLit.use();
 
-		glfwPollEvents();
-		glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
+		deferredLit.setVec3("_EyePos", camera.position);
+		deferredLit.setFloat("_Material.Ka", material.Ka);
+		deferredLit.setFloat("_Material.Kd", material.Kd);
+		deferredLit.setFloat("_Material.Ks", material.Ks);
+		deferredLit.setFloat("_Material.Shininess", material.Shininess);
+		for (int i = 0; i < numPointLights; i++) {
+			//Creates prefix "_PointLights[0]." etc
+			std::string prefix = "pointLights[" + std::to_string(i) + "].";
+			deferredLit.setVec3(prefix + "position", pointLights[i].position);
+			deferredLit.setVec3(prefix + "color", pointLights[i].color);
+			deferredLit.setFloat(prefix + "radius", pointLights[i].radius);
+		}
 
-		float time = (float)glfwGetTime();
-		deltaTime = time - prevFrameTime;
-		prevFrameTime = time;
+		glBindVertexArray(dummyVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
 
-
-		cameraController.move(window, &camera, deltaTime);
-
-		//rotate
-		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
 
 		//Blit gBuffer depth to same framebuffer as fullscreen quad
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.fbo); //Read from gBuffer 
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fb.fbo); //Write to current fbo
-		glBlitFramebuffer(
-			0, 0, screenWidth, screenHeight, 0, 0, screenWidth, screenHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST
-		);
-
+		glBlitFramebuffer(0, 0, screenWidth, screenHeight, 0, 0, screenWidth, screenHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+		
 		//Draw all light orbs
 		lightOrbShader.use();
 		lightOrbShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
@@ -199,6 +197,24 @@ int main() {
 		glfwSwapBuffers(window);
 	}
 	printf("Shutting down...");
+}
+
+void Update()
+{
+	glfwPollEvents();
+	glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
+
+	float time = (float)glfwGetTime();
+	deltaTime = time - prevFrameTime;
+	prevFrameTime = time;
+
+
+	cameraController.move(window, &camera, deltaTime);
+
+	//rotate
+	monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
+
+	light.position = setLightPos * 3.0f;
 }
 
 void drawUI() {

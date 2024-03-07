@@ -20,7 +20,7 @@ struct PointLight{
 	vec3 color;
 };
 const int MAX_POINT_LIGHTS = 64;
-PointLight pointLights[MAX_POINT_LIGHTS];
+uniform PointLight pointLights[MAX_POINT_LIGHTS];
 
 
 struct DirectionalLight{
@@ -55,7 +55,7 @@ vec3 calcPointLight(PointLight light,vec3 normal){
 	vec3 lightColor = (diffuseFactor + specularFactor) * light.color;
 	//Attenuation
 	float d = length(diff); //Distance to light
-	lightColor *= attenuateLinear(d,light.radius); //See below for attenuation options
+	lightColor *= attenuateExponential(d,light.radius); //See below for attenuation options
 	return lightColor;
 }
 
@@ -82,14 +82,7 @@ void main()
 {
 	_MainLight.direction = mainDirection;
 	_MainLight.color = mainColor;
-	
-	for(int i = 0; i <= 10; i++)
-	{
-		pointLights[i].position = vec3(-5 + i,3, -5 + i);
-		pointLights[i].radius = 5f;
-		pointLights[i].color = vec3(i+1/11,1,1);
-	}
-	
+
 	vec3 normal = texture(_gNormals,UV).xyz;
 
 	vec3 totalLight = vec3(0);
@@ -119,13 +112,13 @@ vec3 calculateLighting(vec3 normal,vec3 worldPos,vec3 albedo)
 }
 
 //Linear falloff
-float attenuateLinear(float distance, float radius){
-	return clamp((radius-distance)/radius,0f,1f);
+float attenuateLinear(float dist, float radius){
+	return clamp((radius-dist)/radius,0f,1f);
 }
 //Exponential falloff
-float attenuateExponential(float distance, float radius)
+float attenuateExponential(float dist, float radius)
 {
-	float i = clamp(1.0 - pow(distance/radius,4.0),0.0,1.0);
+	float i = clamp(1.0 - pow(dist/radius,4.0),0.0,1.0);
 	return i * i;
 	
 }
